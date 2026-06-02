@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartNote NLP Analyzer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            display: none;
+        }
+        .result h3 {
+            margin-top: 0;
+        }
+        .high { color: #dc3545; }
+        .medium { color: #fd7e14; }
+        .low { color: #28a745; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧵 SmartNote NLP Analyzer</h1>
+        <p>Enter a customer order note below to analyze urgency, garment type, and deadlines.</p>
+        
+        <textarea id="note" rows="4" placeholder="Example: Need this suit by Friday for job interview, please rush!"></textarea>
+        <br>
+        <button onclick="analyzeNote()">🔍 Analyze Note</button>
+        
+        <div id="loading" class="loading" style="display:none;">Analyzing...</div>
+        
+        <div id="result" class="result">
+            <h3>📊 Analysis Results</h3>
+            <div id="analysis"></div>
+        </div>
+    </div>
+
+    <script>
+        async function analyzeNote() {
+            const note = document.getElementById('note').value;
+            if (!note.trim()) {
+                alert('Please enter a customer note');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ note: note })
+                });
+                
+                const data = await response.json();
+                displayResult(data.analysis);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function displayResult(analysis) {
+            const urgencyClass = analysis.urgency === 'HIGH' ? 'high' : (analysis.urgency === 'MEDIUM' ? 'medium' : 'low');
+            
+            let deadlineHtml = '';
+            if (analysis.deadline) {
+                deadlineHtml = `<p><strong>📅 Deadline:</strong> ${analysis.deadline.date} (${analysis.deadline.relative_time})</p>`;
+            }
+            
+            let garmentsHtml = `<p><strong>👕 Garments:</strong> ${analysis.garments.join(', ')}</p>`;
+            
+            const html = `
+                <p><strong>⚠️ Urgency:</strong> <span class="${urgencyClass}">${analysis.urgency}</span></p>
+                ${garmentsHtml}
+                <p><strong>🎉 Event:</strong> ${analysis.event}</p>
+                ${deadlineHtml}
+                <p><strong>😊 Sentiment:</strong> ${analysis.sentiment.sentiment_label}</p>
+                <p><strong>📊 Priority Score:</strong> ${analysis.priority_score}/10</p>
+                <p><strong>⚡ Action:</strong> ${analysis.action}</p>
+                <hr>
+                <p><strong>📝 Original note:</strong> "${analysis.original_note}"</p>
+            `;
+            
+            document.getElementById('analysis').innerHTML = html;
+            document.getElementById('result').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
